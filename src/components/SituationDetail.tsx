@@ -71,12 +71,12 @@ export function SituationDetail({ situation, onSituationUpdated }: SituationDeta
         await supabase.from('situations').update({ is_starred: newVal }).eq('id', local.id);
     }
 
-    async function handleGenerateVariations(tropes: Trope[] = []) {
+    async function handleGenerateVariations(tropes: Trope[] = [], direction: string = '') {
         setError(null);
         setActivePicker(null);
         setLoadingState('variations');
         try {
-            const varTexts = await generateSituationVariations(local.content, genre, tropes);
+            const varTexts = await generateSituationVariations(local.content, genre, tropes, direction);
             const rows = varTexts.map(content => ({
                 content,
                 title: null,

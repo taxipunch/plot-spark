@@ -33,7 +33,7 @@ function buildTropeContext(tropes: Trope[]): string {
 
 // ─── Generate 4 Variations ───────────────────────────────────────────────────
 
-export async function generateVariations(content: string, genre: string, tropes: Trope[] = []): Promise<string[]> {
+export async function generateVariations(content: string, genre: string, tropes: Trope[] = [], direction: string = ''): Promise<string[]> {
     const genreKey = getGenreKey(genre);
     const focus = genreKey === 'romance'
         ? 'Each variation should explore a different type of forbidden or emotionally charged dynamic: power imbalance, rivals-to-lovers, secret identity, second chance, or class divide. Vary the emotional stakes and the nature of the obstacle.'
@@ -45,7 +45,7 @@ export async function generateVariations(content: string, genre: string, tropes:
 
 Given this raw plot spark, generate exactly 4 distinct variations that each take the seed in a different direction.
 ${focus}
-${buildTropeContext(tropes)}
+${buildTropeContext(tropes)}${direction.trim() ? `\nCreative direction — apply this across all 4 variations: ${direction.trim()}\n` : ''}
 Raw spark: "${content}"
 
 Return ONLY a valid JSON array of exactly 4 strings — no explanation, no markdown fences, no extra text.
@@ -189,7 +189,7 @@ Return ONLY valid JSON — no markdown fences, no explanation:
 
 // ─── Situation Variations ─────────────────────────────────────────────────────
 
-export async function generateSituationVariations(situationContent: string, genre: string, tropes: Trope[] = []): Promise<string[]> {
+export async function generateSituationVariations(situationContent: string, genre: string, tropes: Trope[] = [], direction: string = ''): Promise<string[]> {
     const genreKey = getGenreKey(genre);
     const axes = genreKey === 'romance'
         ? 'Vary across: emotional register (hostile / tender / ambiguous / darkly comic), who holds the power and how it shifts, what each character is hiding, and what would happen if the scene ended differently.'
@@ -201,7 +201,7 @@ export async function generateSituationVariations(situationContent: string, genr
 
 Given this scene situation, generate exactly 4 distinct variations — each takes the same core dynamic in a different direction.
 ${axes}
-${buildTropeContext(tropes)}
+${buildTropeContext(tropes)}${direction.trim() ? `\nCreative direction — apply this across all 4 variations: ${direction.trim()}\n` : ''}
 Scene: "${situationContent}"
 
 Return ONLY a valid JSON array of exactly 4 strings — no markdown, no explanation.

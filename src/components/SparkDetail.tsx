@@ -77,12 +77,12 @@ export function SparkDetail({ spark, onSparkUpdated, onNavigateToSpark, onNaviga
         await supabase.from('plots').update({ is_starred: newVal }).eq('id', localSpark.id);
     }
 
-    async function handleGenerateVariations(tropes: Trope[] = []) {
+    async function handleGenerateVariations(tropes: Trope[] = [], direction: string = '') {
         setActivePicker(null);
         setError(null);
         setLoadingState('variations');
         try {
-            const varTexts = await generateVariations(localSpark.content, genre, tropes);
+            const varTexts = await generateVariations(localSpark.content, genre, tropes, direction);
             const rows = varTexts.map(content => ({
                 content,
                 title: null,

@@ -7,7 +7,7 @@ import { Trope } from '../types/plot';
 interface TropePickerProps {
     genre: string;
     actionLabel: string;
-    onGenerate: (tropes: Trope[]) => void;
+    onGenerate: (tropes: Trope[], direction: string) => void;
     onClose: () => void;
     loading?: boolean;
 }
@@ -16,6 +16,7 @@ export function TropePicker({ genre, actionLabel, onGenerate, onClose, loading =
     const [tropes, setTropes] = useState<Trope[]>([]);
     const [selected, setSelected] = useState<Trope[]>([]);
     const [query, setQuery] = useState('');
+    const [direction, setDirection] = useState('');
 
     useEffect(() => {
         async function fetchTropes() {
@@ -123,16 +124,25 @@ export function TropePicker({ genre, actionLabel, onGenerate, onClose, loading =
                 )}
             </div>
 
+            {/* Direction */}
+            <textarea
+                value={direction}
+                onChange={e => setDirection(e.target.value)}
+                placeholder="Creative direction (optional)... e.g. 'darker tone', 'feudal Japan', 'rival's perspective'"
+                rows={2}
+                className="w-full bg-white border border-zinc-100 rounded-xl px-3 py-2 text-xs text-zinc-700 placeholder:text-zinc-300 outline-none focus:ring-1 focus:ring-zinc-200 resize-none"
+            />
+
             {/* Action */}
             <button
-                onClick={() => onGenerate(selected)}
+                onClick={() => onGenerate(selected, direction.trim())}
                 disabled={loading}
                 className="flex items-center justify-center gap-2 w-full bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 text-white py-3 rounded-xl text-xs font-bold tracking-wider transition-colors"
             >
                 {loading ? (
                     'GENERATING...'
                 ) : (
-                    <><Zap size={12} /> {actionLabel}{selected.length > 0 ? ` WITH ${selected.length} TROPE${selected.length > 1 ? 'S' : ''}` : ' FREELY'}</>
+                    <><Zap size={12} /> {actionLabel}{selected.length > 0 ? ` WITH ${selected.length} TROPE${selected.length > 1 ? 'S' : ''}` : direction.trim() ? ' WITH DIRECTION' : ' FREELY'}</>
                 )}
             </button>
         </motion.div>
