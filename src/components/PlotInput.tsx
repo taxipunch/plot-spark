@@ -132,7 +132,7 @@ export function PlotInput({ onPlotCreated }: PlotInputProps) {
                 <button
                     type="submit"
                     disabled={isSubmitting || !content.trim()}
-                    className="w-full bg-[#fde1cb] hover:bg-[#fad0b2] text-white disabled:opacity-50 disabled:cursor-not-allowed py-4 rounded-2xl text-sm font-bold tracking-wider transition-colors mt-4 mb-20 shadow-sm"
+                    className={`w-full py-4 rounded-2xl text-sm font-bold tracking-wider transition-all mt-4 mb-20 shadow-sm text-white ${content.trim() ? 'bg-orange-400 hover:bg-orange-500 cursor-pointer' : 'bg-[#fde1cb] opacity-50 cursor-not-allowed'}`}
                 >
                     {isSubmitting ? 'SAVING...' : 'SAVE SPARK'}
                 </button>
