@@ -1,6 +1,4 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { PenTool, CheckCircle, Tag, Loader2, Sparkles } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { PlotIdeaInput } from '../types/plot';
 
@@ -8,26 +6,22 @@ interface PlotInputProps {
     onPlotCreated: () => void;
 }
 
+const GENRES = ['ROMANCE', 'ADVENTURE'];
+const SUGGESTED_TAGS = ['Power Dynamic', 'Forbidden', 'Revenge', 'Mistaken Identity', 'Rivals', 'Survival', 'Conspiracy', 'Second Chance', 'Reluctant Alliance', 'Dark Secret'];
+
 export function PlotInput({ onPlotCreated }: PlotInputProps) {
-    const [content, setContent] = useState('');
     const [title, setTitle] = useState('');
-    const [tagInput, setTagInput] = useState('');
+    const [content, setContent] = useState('');
+    const [genre, setGenre] = useState(GENRES[0]);
     const [tags, setTags] = useState<string[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [isExpanded, setIsExpanded] = useState(false);
 
-    const handleAddTag = (e: React.KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === 'Enter' && tagInput.trim()) {
-            e.preventDefault();
-            if (!tags.includes(tagInput.trim())) {
-                setTags([...tags, tagInput.trim().toLowerCase()]);
-            }
-            setTagInput('');
+    const toggleTag = (tag: string) => {
+        if (tags.includes(tag)) {
+            setTags(tags.filter(t => t !== tag));
+        } else {
+            setTags([...tags, tag]);
         }
-    };
-
-    const removeTag = (tagToRemove: string) => {
-        setTags(tags.filter(t => t !== tagToRemove));
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -36,10 +30,9 @@ export function PlotInput({ onPlotCreated }: PlotInputProps) {
 
         setIsSubmitting(true);
 
-        // Convert undefined title to null or empty
         const payload: PlotIdeaInput = {
             content: content.trim(),
-            tags,
+            tags: [...tags, genre], // storing genre as a tag for now based on previous schema
             status: 'draft'
         };
 
@@ -55,7 +48,7 @@ export function PlotInput({ onPlotCreated }: PlotInputProps) {
             setContent('');
             setTitle('');
             setTags([]);
-            setIsExpanded(false);
+            setGenre(GENRES[0]);
             onPlotCreated();
         } else {
             console.error('Error adding plot:', error);
@@ -63,102 +56,86 @@ export function PlotInput({ onPlotCreated }: PlotInputProps) {
     };
 
     return (
-        <div className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border border-zinc-200 dark:border-zinc-800 rounded-3xl p-4 md:p-6 shadow-xl relative overflow-hidden transition-all duration-300">
-            <div className="absolute top-0 right-0 p-3 opacity-20 pointer-events-none">
-                <Sparkles size={120} className="text-indigo-500" />
-            </div>
+        <div className="bg-white rounded-t-[2.5rem] p-6 pb-20 shadow-sm flex flex-col h-full overflow-y-auto hide-scrollbar">
+            <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+                
+                {/* Title Section */}
+                <div>
+                    <label className="block text-xs font-bold text-zinc-400 mb-2 tracking-widest">TITLE</label>
+                    <input
+                        type="text"
+                        placeholder="Enter spark title..."
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        className="w-full bg-zinc-50 text-zinc-800 placeholder:text-zinc-400 border-none outline-none rounded-2xl px-4 py-4 focus:ring-2 focus:ring-orange-100 transition-shadow"
+                    />
+                </div>
 
-            <form onSubmit={handleSubmit} className="relative z-10 flex flex-col gap-4">
+                {/* Content Section */}
+                <div className="flex-1">
+                    <label className="block text-xs font-bold text-zinc-400 mb-2 tracking-widest">THE SPARK</label>
+                    <textarea
+                        value={content}
+                        onChange={(e) => setContent(e.target.value)}
+                        placeholder="Describe the raw idea..."
+                        className="w-full bg-zinc-50 text-zinc-800 placeholder:text-zinc-400 border-none outline-none rounded-3xl px-4 py-4 focus:ring-2 focus:ring-orange-100 resize-none h-40 transition-shadow"
+                        required
+                    />
+                </div>
 
-                <AnimatePresence>
-                    {isExpanded && (
-                        <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: 'auto', opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            className="overflow-hidden"
-                        >
-                            <input
-                                type="text"
-                                placeholder="Title (Optional)"
-                                value={title}
-                                onChange={(e) => setTitle(e.target.value)}
-                                className="w-full bg-transparent text-lg md:text-xl font-medium text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-600 border-none outline-none focus:ring-0 mb-4 px-2"
-                            />
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                {/* Genre Section */}
+                <div>
+                    <label className="block text-xs font-bold text-zinc-400 mb-2 tracking-widest">GENRE</label>
+                    <div className="flex gap-2">
+                        {GENRES.map(g => (
+                            <button
+                                key={g}
+                                type="button"
+                                onClick={() => setGenre(g)}
+                                className={`flex-1 py-3 rounded-2xl text-xs font-bold tracking-wide transition-colors ${
+                                    genre === g 
+                                    ? 'bg-orange-400 text-white shadow-sm' 
+                                    : 'bg-zinc-50 text-zinc-400 hover:bg-zinc-100'
+                                }`}
+                            >
+                                {g}
+                            </button>
+                        ))}
+                    </div>
+                </div>
 
-                <textarea
-                    value={content}
-                    onChange={(e) => setContent(e.target.value)}
-                    onFocus={() => setIsExpanded(true)}
-                    placeholder="What's the spark of your next plot?"
-                    rows={isExpanded ? 4 : 2}
-                    className="w-full bg-transparent text-zinc-800 dark:text-zinc-200 placeholder:text-zinc-500 dark:placeholder:text-zinc-400 border-none outline-none focus:ring-0 resize-none text-base md:text-lg px-2 transition-all duration-300"
-                    required
-                />
+                {/* Tags Section */}
+                <div>
+                    <label className="block text-xs font-bold text-zinc-400 mb-2 tracking-widest">TAGS</label>
+                    <div className="flex flex-wrap gap-2">
+                        {SUGGESTED_TAGS.map(tag => {
+                            const isActive = tags.includes(tag);
+                            return (
+                                <button
+                                    key={tag}
+                                    type="button"
+                                    onClick={() => toggleTag(tag)}
+                                    className={`px-4 py-2 rounded-full text-xs font-bold transition-colors ${
+                                        isActive 
+                                        ? 'bg-zinc-800 text-white' 
+                                        : 'bg-zinc-50 text-zinc-400 hover:bg-zinc-100'
+                                    }`}
+                                >
+                                    {tag}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
 
-                <AnimatePresence>
-                    {isExpanded && (
-                        <motion.div
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95 }}
-                            className="flex flex-col gap-3 pt-3 border-t border-zinc-100 dark:border-zinc-800"
-                        >
-
-                            <div className="flex flex-wrap gap-2 px-2">
-                                {tags.map(tag => (
-                                    <span key={tag} className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 text-xs font-medium">
-                                        #{tag}
-                                        <button type="button" onClick={() => removeTag(tag)} className="hover:text-indigo-900 dark:hover:text-indigo-100 focus:outline-none">
-                                            &times;
-                                        </button>
-                                    </span>
-                                ))}
-                            </div>
-
-                            <div className="flex items-center justify-between px-2">
-                                <div className="flex items-center gap-2 flex-1">
-                                    <Tag size={16} className="text-zinc-400" />
-                                    <input
-                                        type="text"
-                                        placeholder="Add tags... (Press Enter)"
-                                        value={tagInput}
-                                        onChange={(e) => setTagInput(e.target.value)}
-                                        onKeyDown={handleAddTag}
-                                        className="bg-transparent text-sm w-full outline-none text-zinc-600 dark:text-zinc-300 placeholder:text-zinc-400"
-                                    />
-                                </div>
-
-                                <div className="flex space-x-2">
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setIsExpanded(false);
-                                            setContent('');
-                                            setTitle('');
-                                            setTags([]);
-                                        }}
-                                        className="px-4 py-2 rounded-full text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-sm font-medium transition-colors"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        disabled={isSubmitting || !content.trim()}
-                                        className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-5 py-2 rounded-full text-sm font-medium transition-all transform hover:scale-105 active:scale-95 shadow-lg shadow-indigo-600/30"
-                                    >
-                                        {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <PenTool size={16} />}
-                                        Save Plot
-                                    </button>
-                                </div>
-                            </div>
-
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                {/* Submit Button */}
+                <button
+                    type="submit"
+                    disabled={isSubmitting || !content.trim()}
+                    className="w-full bg-[#fde1cb] hover:bg-[#fad0b2] text-white disabled:opacity-50 disabled:cursor-not-allowed py-4 rounded-2xl text-sm font-bold tracking-wider transition-colors mt-4 mb-20 shadow-sm"
+                >
+                    {isSubmitting ? 'SAVING...' : 'SAVE SPARK'}
+                </button>
 
             </form>
         </div>
