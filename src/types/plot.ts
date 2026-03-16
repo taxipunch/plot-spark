@@ -43,3 +43,30 @@ export type BPlot = {
     genre: string | null;
     tags: string[];
 };
+
+export type SituationInput = {
+    title?: string;
+    content: string;
+    genre?: string;
+    tags?: string[];
+    spark_type?: 'original' | 'variation';
+    parent_situation_id?: string;
+};
+
+export type Situation = {
+    id: string;
+    created_at: string;
+    title: string | null;
+    content: string;
+    genre: string | null;
+    tags: string[];
+    is_starred: boolean;
+    spark_type: 'original' | 'variation';
+    parent_situation_id: string | null;
+    setting_atmosphere: string | null;
+    emotional_temperature: string | null;
+    character_positions: string | null;
+    scene_function: string | null;
+    the_moment: string | null;
+    exit_states: string[] | null;
+};

@@ -139,3 +139,102 @@ Return ONLY valid JSON — no markdown:
     const raw = await callGemini(prompt);
     return parseJSON<GeneratedBPlot>(raw);
 }
+
+// ─── Situations for Spark ─────────────────────────────────────────────────────
+
+export type GeneratedSituation = {
+    title: string;
+    content: string;
+};
+
+export async function generateSituationsForSpark(sparkContent: string, genre: string): Promise<GeneratedSituation[]> {
+    const isRomance = genre.toUpperCase().includes('ROMANCE');
+
+    const genreGuide = isRomance
+        ? `Generate 4 charged interpersonal scenes: the ignition (first moment the attraction becomes undeniable), the escalation (a scene where desire costs something real), the confrontation/revelation (a secret or wound surfaces), and the aftermath (the quiet charged moment after everything shifts).`
+        : `Generate 4 high-stakes operational scenes: the first contact (protagonist meets the key player/asset under pressure), the complication (the mission changes or a loyalty fractures), the confrontation (the central threat or betrayal becomes direct), and the pivot (the moment the protagonist makes the choice that defines the story).`;
+
+    const prompt = `You are a scene-level story development expert.
+
+Given this story spark premise, generate exactly 4 charged scene situations that naturally live inside this story.
+${genreGuide}
+
+Each situation should be a specific, vivid, concrete moment — not a summary. Make them feel like real scenes, not plot summaries.
+
+Spark premise: "${sparkContent}"
+
+Return ONLY valid JSON — no markdown fences, no explanation:
+[
+  {"title": "Short scene title (4-6 words)", "content": "2-3 sentences describing the scene, its charge, and the specific tension in the room."},
+  {"title": "...", "content": "..."},
+  {"title": "...", "content": "..."},
+  {"title": "...", "content": "..."}
+]`;
+
+    const raw = await callGemini(prompt);
+    return parseJSON<GeneratedSituation[]>(raw);
+}
+
+// ─── Situation Variations ─────────────────────────────────────────────────────
+
+export async function generateSituationVariations(situationContent: string, genre: string): Promise<string[]> {
+    const isRomance = genre.toUpperCase().includes('ROMANCE');
+
+    const axes = isRomance
+        ? 'Vary across: emotional register (hostile / tender / ambiguous / darkly comic), who holds the power and how it shifts, what each character is hiding, and what would happen if the scene ended differently.'
+        : 'Vary across: threat level (cold operational / openly hostile / morally ambiguous / grudging alliance), who has tactical advantage, what information is missing, and what the protagonist risks losing.';
+
+    const prompt = `You are a scene development expert.
+
+Given this scene situation, generate exactly 4 distinct variations — each takes the same core dynamic in a different direction.
+${axes}
+
+Scene: "${situationContent}"
+
+Return ONLY a valid JSON array of exactly 4 strings — no markdown, no explanation.
+Each string is a vivid 2-3 sentence variation of the scene.
+
+["Variation 1 here.", "Variation 2 here.", "Variation 3 here.", "Variation 4 here."]`;
+
+    const raw = await callGemini(prompt);
+    return parseJSON<string[]>(raw);
+}
+
+// ─── Situation Development ────────────────────────────────────────────────────
+
+export type DevelopedSituation = {
+    setting_atmosphere: string;
+    emotional_temperature: string;
+    character_positions: string;
+    scene_function: string;
+    the_moment: string;
+    exit_states: string[];
+};
+
+export async function developSituation(situationContent: string, genre: string): Promise<DevelopedSituation> {
+    const isRomance = genre.toUpperCase().includes('ROMANCE');
+
+    const genreGuide = isRomance
+        ? `Genre: ROMANCE/EROTIC. Focus on: the physical proximity and what it costs to maintain composure, the thing neither character will say, the specific sensory detail that makes the attraction undeniable, what each character came into this scene wanting and what they leave wanting instead.`
+        : `Genre: ADVENTURE. Focus on: the tactical situation and what it demands, the operational risk of feeling anything, the specific competence or vulnerability that changes the dynamic, what the protagonist came in to achieve and what he's now not sure he can afford to lose.`;
+
+    const prompt = `You are a scene-level story craft expert.
+
+Develop this scene situation into its full dramatic anatomy.
+${genreGuide}
+
+Scene: "${situationContent}"
+
+Return ONLY valid JSON — no markdown:
+{
+  "setting_atmosphere": "Where this happens. Time of day, physical space, sensory texture. What the environment is doing to the characters.",
+  "emotional_temperature": "The charge between the characters before anyone speaks. What's been unsaid. What the air feels like.",
+  "character_positions": "What each character wants from this scene, what they're protecting, and what they're pretending not to feel.",
+  "scene_function": "What this scene does in the story — reveals, escalates, turns, or resets? What the reader learns here that changes everything.",
+  "the_moment": "The specific beat — a gesture, a line, a silence — that makes this scene unforgettable. The thing the reader will remember.",
+  "exit_states": ["How this scene could end — option 1 and where it leaves both characters.", "Option 2 and its emotional aftermath.", "Option 3 — the unexpected resolution."]
+}`;
+
+    const raw = await callGemini(prompt);
+    return parseJSON<DevelopedSituation>(raw);
+}

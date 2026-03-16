@@ -1,18 +1,19 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Star, Loader2, GitFork, Zap, ChevronRight, GitBranch } from 'lucide-react';
+import { Star, Loader2, GitFork, Zap, ChevronRight, GitBranch, Clapperboard } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { PlotIdeaOutput, BPlot } from '../types/plot';
-import { generateVariations, developSpark, generateBPlot } from '../lib/gemini';
+import { PlotIdeaOutput, BPlot, Situation } from '../types/plot';
+import { generateVariations, developSpark, generateBPlot, generateSituationsForSpark } from '../lib/gemini';
 import { BPlotCard } from './BPlotCard';
 
 interface SparkDetailProps {
     spark: PlotIdeaOutput;
     onSparkUpdated: (updated: PlotIdeaOutput) => void;
     onNavigateToSpark: (spark: PlotIdeaOutput) => void;
+    onNavigateToSituation: (situation: Situation) => void;
 }
 
-type LoadingState = 'idle' | 'variations' | 'developing' | 'bplot';
+type LoadingState = 'idle' | 'variations' | 'developing' | 'bplot' | 'situations';
 
 function getGenre(spark: PlotIdeaOutput): string {
     if (spark.genre) return spark.genre;
@@ -22,10 +23,11 @@ function getGenre(spark: PlotIdeaOutput): string {
     return genreTag || 'ROMANCE';
 }
 
-export function SparkDetail({ spark, onSparkUpdated, onNavigateToSpark }: SparkDetailProps) {
+export function SparkDetail({ spark, onSparkUpdated, onNavigateToSpark, onNavigateToSituation }: SparkDetailProps) {
     const [localSpark, setLocalSpark] = useState<PlotIdeaOutput>(spark);
     const [variations, setVariations] = useState<PlotIdeaOutput[]>([]);
     const [bplots, setBplots] = useState<BPlot[]>([]);
+    const [linkedSituations, setLinkedSituations] = useState<Situation[]>([]);
     const [loadingState, setLoadingState] = useState<LoadingState>('idle');
     const [developingVariationId, setDevelopingVariationId] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -33,10 +35,8 @@ export function SparkDetail({ spark, onSparkUpdated, onNavigateToSpark }: SparkD
     const genre = getGenre(localSpark);
     const isDeveloped = Boolean(localSpark.logline);
 
-    // Load existing variations and b-plots on mount
     useEffect(() => {
         async function loadRelated() {
-            // Load variations (child sparks)
             const { data: varData } = await supabase
                 .from('plots')
                 .select('*')
@@ -44,19 +44,24 @@ export function SparkDetail({ spark, onSparkUpdated, onNavigateToSpark }: SparkD
                 .order('created_at', { ascending: true });
             if (varData) setVariations(varData as PlotIdeaOutput[]);
 
-            // Load associated b-plots
-            const { data: assocData } = await supabase
+            const { data: bplotAssoc } = await supabase
                 .from('spark_bplot_associations')
                 .select('bplot_id')
                 .eq('spark_id', localSpark.id);
-
-            if (assocData && assocData.length > 0) {
-                const ids = assocData.map((r: { bplot_id: string }) => r.bplot_id);
-                const { data: bplotData } = await supabase
-                    .from('b_plots')
-                    .select('*')
-                    .in('id', ids);
+            if (bplotAssoc && bplotAssoc.length > 0) {
+                const ids = bplotAssoc.map((r: { bplot_id: string }) => r.bplot_id);
+                const { data: bplotData } = await supabase.from('b_plots').select('*').in('id', ids);
                 if (bplotData) setBplots(bplotData as BPlot[]);
+            }
+
+            const { data: sitAssoc } = await supabase
+                .from('spark_situation_associations')
+                .select('situation_id')
+                .eq('spark_id', localSpark.id);
+            if (sitAssoc && sitAssoc.length > 0) {
+                const ids = sitAssoc.map((r: { situation_id: string }) => r.situation_id);
+                const { data: sitData } = await supabase.from('situations').select('*').in('id', ids);
+                if (sitData) setLinkedSituations(sitData as Situation[]);
             }
         }
         loadRelated();
@@ -84,10 +89,7 @@ export function SparkDetail({ spark, onSparkUpdated, onNavigateToSpark }: SparkD
                 spark_type: 'variation',
                 parent_spark_id: localSpark.id,
             }));
-            const { data, error: insertErr } = await supabase
-                .from('plots')
-                .insert(rows)
-                .select();
+            const { data, error: insertErr } = await supabase.from('plots').insert(rows).select();
             if (insertErr) throw insertErr;
             if (data) setVariations(data as PlotIdeaOutput[]);
         } catch (e) {
@@ -100,7 +102,8 @@ export function SparkDetail({ spark, onSparkUpdated, onNavigateToSpark }: SparkD
 
     async function handleDevelopSpark(targetSpark: PlotIdeaOutput, onDone?: (updated: PlotIdeaOutput) => void) {
         setError(null);
-        if (targetSpark.id === localSpark.id) {
+        const isPrimary = targetSpark.id === localSpark.id;
+        if (isPrimary) {
             setLoadingState('developing');
         } else {
             setDevelopingVariationId(targetSpark.id);
@@ -116,9 +119,38 @@ export function SparkDetail({ spark, onSparkUpdated, onNavigateToSpark }: SparkD
             if (updateErr) throw updateErr;
             if (data) {
                 const updated = data as PlotIdeaOutput;
-                if (targetSpark.id === localSpark.id) {
+                if (isPrimary) {
                     setLocalSpark(updated);
                     onSparkUpdated(updated);
+
+                    // Auto-generate 4 situations after developing the primary spark
+                    setLoadingState('situations');
+                    try {
+                        const generatedSits = await generateSituationsForSpark(targetSpark.content, genre);
+                        const sitRows = generatedSits.map(s => ({
+                            title: s.title,
+                            content: s.content,
+                            genre,
+                            tags: [],
+                        }));
+                        const { data: sitData, error: sitErr } = await supabase
+                            .from('situations')
+                            .insert(sitRows)
+                            .select();
+                        if (!sitErr && sitData) {
+                            const newSituations = sitData as Situation[];
+                            const assocRows = newSituations.map(s => ({
+                                spark_id: targetSpark.id,
+                                situation_id: s.id,
+                                auto_generated: true,
+                            }));
+                            await supabase.from('spark_situation_associations').insert(assocRows);
+                            setLinkedSituations(newSituations);
+                        }
+                    } catch (sitError) {
+                        console.error('Failed to auto-generate situations:', sitError);
+                        // Non-fatal — spark development succeeded
+                    }
                 } else {
                     setVariations(prev => prev.map(v => v.id === updated.id ? updated : v));
                     onDone?.(updated);
@@ -183,20 +215,17 @@ export function SparkDetail({ spark, onSparkUpdated, onNavigateToSpark }: SparkD
                 </button>
             </div>
 
-            {/* Title */}
             {localSpark.title && (
                 <h2 className="text-2xl font-extrabold text-zinc-900 font-serif leading-tight">
                     {localSpark.title}
                 </h2>
             )}
 
-            {/* The Spark */}
             <div>
                 <p className="text-xs font-bold text-zinc-400 tracking-widest mb-2">THE SPARK</p>
                 <p className="text-zinc-700 leading-relaxed">{localSpark.content}</p>
             </div>
 
-            {/* Error */}
             {error && (
                 <div className="bg-red-50 border border-red-100 rounded-2xl p-4 text-sm text-red-600">
                     {error}
@@ -258,7 +287,6 @@ export function SparkDetail({ spark, onSparkUpdated, onNavigateToSpark }: SparkD
 
             {/* ── Action Buttons ── */}
             <div className="flex flex-col gap-3">
-                {/* Develop directly (if not yet developed, and no variations OR is a variation itself) */}
                 {!isDeveloped && (
                     <button
                         onClick={() => handleDevelopSpark(localSpark)}
@@ -266,14 +294,15 @@ export function SparkDetail({ spark, onSparkUpdated, onNavigateToSpark }: SparkD
                         className="flex items-center justify-center gap-2 w-full bg-orange-400 hover:bg-orange-500 disabled:opacity-50 text-white py-4 rounded-2xl text-sm font-bold tracking-wider transition-colors shadow-sm"
                     >
                         {loadingState === 'developing' ? (
-                            <><Loader2 size={16} className="animate-spin" /> DEVELOPING...</>
+                            <><Loader2 size={16} className="animate-spin" /> DEVELOPING PREMISE...</>
+                        ) : loadingState === 'situations' ? (
+                            <><Loader2 size={16} className="animate-spin" /> GENERATING SCENES...</>
                         ) : (
                             <><Zap size={16} /> DEVELOP <ChevronRight size={16} /></>
                         )}
                     </button>
                 )}
 
-                {/* Generate Variations (only for originals that aren't yet developed) */}
                 {localSpark.spark_type !== 'variation' && (
                     <button
                         onClick={handleGenerateVariations}
@@ -345,11 +374,47 @@ export function SparkDetail({ spark, onSparkUpdated, onNavigateToSpark }: SparkD
                 )}
             </AnimatePresence>
 
+            {/* ── Linked Situations ── */}
+            <AnimatePresence>
+                {linkedSituations.length > 0 && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="flex flex-col gap-3"
+                    >
+                        <p className="text-xs font-bold text-zinc-400 tracking-widest">SCENES</p>
+                        {linkedSituations.map((sit, i) => (
+                            <motion.div
+                                key={sit.id}
+                                initial={{ opacity: 0, y: 8 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: i * 0.04 }}
+                                className="bg-violet-50/60 border border-violet-100/60 rounded-2xl p-4 flex flex-col gap-2"
+                            >
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <Clapperboard size={12} className="text-violet-400 shrink-0" />
+                                        <span className="text-xs font-bold text-violet-500 truncate">
+                                            {sit.title || 'Untitled Scene'}
+                                        </span>
+                                    </div>
+                                    <button
+                                        onClick={() => onNavigateToSituation(sit)}
+                                        className="flex items-center gap-1 text-xs font-bold text-violet-400 hover:text-violet-600 transition-colors shrink-0"
+                                    >
+                                        OPEN <ChevronRight size={10} />
+                                    </button>
+                                </div>
+                                <p className="text-xs text-zinc-600 leading-relaxed line-clamp-2">{sit.content}</p>
+                            </motion.div>
+                        ))}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             {/* ── B-Plot Section ── */}
             <div className="flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                    <p className="text-xs font-bold text-zinc-400 tracking-widest">B-PLOT STRAND</p>
-                </div>
+                <p className="text-xs font-bold text-zinc-400 tracking-widest">B-PLOT STRAND</p>
 
                 <button
                     onClick={handleGenerateBPlot}
