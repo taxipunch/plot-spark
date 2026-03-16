@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Star, Loader2, GitFork, Zap, ChevronRight, Clapperboard, Sparkles } from 'lucide-react';
+import { Star, Loader2, GitFork, Zap, ChevronRight, Clapperboard, Sparkles, BookOpen, Check } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { Situation, PlotIdeaOutput } from '../types/plot';
-import { developSituation, generateSituationVariations } from '../lib/gemini';
+import { Situation, PlotIdeaOutput, Trope } from '../types/plot';
+import { developSituation, generateSituationVariations, extractTropeFromSituation } from '../lib/gemini';
+import { TropePicker } from './TropePicker';
 
 interface SituationDetailProps {
     situation: Situation;
@@ -25,6 +26,10 @@ export function SituationDetail({ situation, onSituationUpdated }: SituationDeta
     const [loadingState, setLoadingState] = useState<LoadingState>('idle');
     const [developingVariationId, setDevelopingVariationId] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [activePicker, setActivePicker] = useState<'variations' | 'develop' | null>(null);
+    const [tropeFormOpen, setTropeFormOpen] = useState(false);
+    const [tropeForm, setTropeForm] = useState<Partial<Omit<Trope, 'id' | 'created_at'>>>({});
+    const [savingTrope, setSavingTrope] = useState(false);
 
     const genre = getGenre(local);
     const isDeveloped = Boolean(local.setting_atmosphere);
@@ -66,11 +71,12 @@ export function SituationDetail({ situation, onSituationUpdated }: SituationDeta
         await supabase.from('situations').update({ is_starred: newVal }).eq('id', local.id);
     }
 
-    async function handleGenerateVariations() {
+    async function handleGenerateVariations(tropes: Trope[] = []) {
         setError(null);
+        setActivePicker(null);
         setLoadingState('variations');
         try {
-            const varTexts = await generateSituationVariations(local.content, genre);
+            const varTexts = await generateSituationVariations(local.content, genre, tropes);
             const rows = varTexts.map(content => ({
                 content,
                 title: null,
@@ -90,15 +96,16 @@ export function SituationDetail({ situation, onSituationUpdated }: SituationDeta
         }
     }
 
-    async function handleDevelopSituation(target: Situation) {
+    async function handleDevelopSituation(target: Situation, tropes: Trope[] = []) {
         setError(null);
+        setActivePicker(null);
         if (target.id === local.id) {
             setLoadingState('developing');
         } else {
             setDevelopingVariationId(target.id);
         }
         try {
-            const result = await developSituation(target.content, genre);
+            const result = await developSituation(target.content, genre, tropes);
             const { data, error: updateErr } = await supabase
                 .from('situations')
                 .update(result)
@@ -121,6 +128,30 @@ export function SituationDetail({ situation, onSituationUpdated }: SituationDeta
         } finally {
             setLoadingState('idle');
             setDevelopingVariationId(null);
+        }
+    }
+
+    async function handleOpenTropeForm() {
+        const extracted = await extractTropeFromSituation(local);
+        setTropeForm({ genre: genre.toLowerCase() as Trope['genre'], ...extracted });
+        setTropeFormOpen(true);
+    }
+
+    async function handleSaveTrope() {
+        if (!tropeForm.name || !tropeForm.description) return;
+        setSavingTrope(true);
+        try {
+            await supabase.from('tropes').insert({
+                name: tropeForm.name,
+                description: tropeForm.description,
+                genre: tropeForm.genre ?? 'both',
+                dramatic_function: tropeForm.dramatic_function ?? null,
+                signature_beat: tropeForm.signature_beat ?? null,
+                pairs_well_with: [],
+            });
+            setTropeFormOpen(false);
+        } finally {
+            setSavingTrope(false);
         }
     }
 
@@ -208,34 +239,171 @@ export function SituationDetail({ situation, onSituationUpdated }: SituationDeta
             {/* ── Action Buttons ── */}
             <div className="flex flex-col gap-3">
                 {!isDeveloped && (
+                    <div className="flex flex-col gap-2">
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => handleDevelopSituation(local, [])}
+                                disabled={isLoading}
+                                className="flex items-center justify-center gap-2 flex-1 bg-violet-400 hover:bg-violet-500 disabled:opacity-50 text-white py-4 rounded-2xl text-sm font-bold tracking-wider transition-colors shadow-sm"
+                            >
+                                {loadingState === 'developing' ? (
+                                    <><Loader2 size={16} className="animate-spin" /> DEVELOPING...</>
+                                ) : (
+                                    <><Zap size={16} /> DEVELOP</>
+                                )}
+                            </button>
+                            <button
+                                onClick={() => setActivePicker(p => p === 'develop' ? null : 'develop')}
+                                disabled={isLoading}
+                                className={`flex items-center gap-1.5 px-4 py-4 rounded-2xl text-sm font-bold tracking-wider transition-colors border-2 ${
+                                    activePicker === 'develop'
+                                        ? 'border-violet-400 bg-violet-50 text-violet-600'
+                                        : 'border-zinc-200 text-zinc-500 hover:border-zinc-300'
+                                }`}
+                            >
+                                <BookOpen size={14} /> WITH TROPES
+                            </button>
+                        </div>
+                        <AnimatePresence>
+                            {activePicker === 'develop' && (
+                                <TropePicker
+                                    genre={genre}
+                                    actionLabel="DEVELOP"
+                                    onGenerate={(tropes) => handleDevelopSituation(local, tropes)}
+                                    onClose={() => setActivePicker(null)}
+                                    loading={loadingState === 'developing'}
+                                />
+                            )}
+                        </AnimatePresence>
+                    </div>
+                )}
+
+                {local.spark_type !== 'variation' && variations.length === 0 && (
+                    <div className="flex flex-col gap-2">
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => handleGenerateVariations([])}
+                                disabled={isLoading}
+                                className="flex items-center justify-center gap-2 flex-1 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-40 text-white py-4 rounded-2xl text-sm font-bold tracking-wider transition-colors"
+                            >
+                                {loadingState === 'variations' ? (
+                                    <><Loader2 size={16} className="animate-spin" /> GENERATING...</>
+                                ) : (
+                                    <><GitFork size={16} /> VARIATIONS</>
+                                )}
+                            </button>
+                            <button
+                                onClick={() => setActivePicker(p => p === 'variations' ? null : 'variations')}
+                                disabled={isLoading}
+                                className={`flex items-center gap-1.5 px-4 py-4 rounded-2xl text-sm font-bold tracking-wider transition-colors border-2 ${
+                                    activePicker === 'variations'
+                                        ? 'border-zinc-800 bg-zinc-100 text-zinc-800'
+                                        : 'border-zinc-200 text-zinc-500 hover:border-zinc-300'
+                                }`}
+                            >
+                                <BookOpen size={14} /> WITH TROPES
+                            </button>
+                        </div>
+                        <AnimatePresence>
+                            {activePicker === 'variations' && (
+                                <TropePicker
+                                    genre={genre}
+                                    actionLabel="GENERATE VARIATIONS"
+                                    onGenerate={handleGenerateVariations}
+                                    onClose={() => setActivePicker(null)}
+                                    loading={loadingState === 'variations'}
+                                />
+                            )}
+                        </AnimatePresence>
+                    </div>
+                )}
+
+                {local.spark_type !== 'variation' && variations.length > 0 && (
+                    <div className="flex items-center gap-2 text-xs font-bold text-zinc-400 tracking-widest">
+                        <GitFork size={14} /> {variations.length} VARIATIONS GENERATED
+                    </div>
+                )}
+
+                {/* Save as Trope */}
+                {isDeveloped && (
                     <button
-                        onClick={() => handleDevelopSituation(local)}
-                        disabled={isLoading}
-                        className="flex items-center justify-center gap-2 w-full bg-violet-400 hover:bg-violet-500 disabled:opacity-50 text-white py-4 rounded-2xl text-sm font-bold tracking-wider transition-colors shadow-sm"
+                        onClick={handleOpenTropeForm}
+                        disabled={tropeFormOpen}
+                        className="flex items-center justify-center gap-2 w-full border-2 border-dashed border-zinc-200 hover:border-zinc-300 text-zinc-400 hover:text-zinc-600 py-3 rounded-2xl text-xs font-bold tracking-wider transition-colors"
                     >
-                        {loadingState === 'developing' ? (
-                            <><Loader2 size={16} className="animate-spin" /> DEVELOPING SCENE...</>
-                        ) : (
-                            <><Zap size={16} /> DEVELOP SCENE <ChevronRight size={16} /></>
-                        )}
+                        <BookOpen size={13} /> SAVE AS TROPE
                     </button>
                 )}
 
-                {local.spark_type !== 'variation' && (
-                    <button
-                        onClick={handleGenerateVariations}
-                        disabled={isLoading || variations.length > 0}
-                        className="flex items-center justify-center gap-2 w-full bg-zinc-800 hover:bg-zinc-700 disabled:opacity-40 text-white py-4 rounded-2xl text-sm font-bold tracking-wider transition-colors"
-                    >
-                        {loadingState === 'variations' ? (
-                            <><Loader2 size={16} className="animate-spin" /> GENERATING...</>
-                        ) : variations.length > 0 ? (
-                            <><GitFork size={16} /> {variations.length} VARIATIONS GENERATED</>
-                        ) : (
-                            <><GitFork size={16} /> GENERATE VARIATIONS <ChevronRight size={16} /></>
-                        )}
-                    </button>
-                )}
+                {/* Trope form */}
+                <AnimatePresence>
+                    {tropeFormOpen && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 4 }}
+                            className="bg-zinc-50 border border-zinc-100 rounded-2xl p-4 flex flex-col gap-3"
+                        >
+                            <p className="text-xs font-bold text-zinc-400 tracking-widest">ABSTRACT AS TROPE</p>
+                            <input
+                                value={tropeForm.name ?? ''}
+                                onChange={e => setTropeForm(f => ({ ...f, name: e.target.value }))}
+                                placeholder="Trope name"
+                                className="w-full bg-white border border-zinc-100 rounded-xl px-3 py-2 text-sm text-zinc-700 placeholder:text-zinc-300 outline-none focus:ring-1 focus:ring-zinc-200"
+                            />
+                            <textarea
+                                value={tropeForm.description ?? ''}
+                                onChange={e => setTropeForm(f => ({ ...f, description: e.target.value }))}
+                                placeholder="Description"
+                                rows={2}
+                                className="w-full bg-white border border-zinc-100 rounded-xl px-3 py-2 text-sm text-zinc-700 placeholder:text-zinc-300 outline-none focus:ring-1 focus:ring-zinc-200 resize-none"
+                            />
+                            <input
+                                value={tropeForm.dramatic_function ?? ''}
+                                onChange={e => setTropeForm(f => ({ ...f, dramatic_function: e.target.value }))}
+                                placeholder="Dramatic function (optional)"
+                                className="w-full bg-white border border-zinc-100 rounded-xl px-3 py-2 text-sm text-zinc-700 placeholder:text-zinc-300 outline-none focus:ring-1 focus:ring-zinc-200"
+                            />
+                            <input
+                                value={tropeForm.signature_beat ?? ''}
+                                onChange={e => setTropeForm(f => ({ ...f, signature_beat: e.target.value }))}
+                                placeholder="Signature beat (optional)"
+                                className="w-full bg-white border border-zinc-100 rounded-xl px-3 py-2 text-sm text-zinc-700 placeholder:text-zinc-300 outline-none focus:ring-1 focus:ring-zinc-200"
+                            />
+                            <div className="flex gap-2">
+                                {(['romance', 'adventure', 'both'] as const).map(g => (
+                                    <button
+                                        key={g}
+                                        onClick={() => setTropeForm(f => ({ ...f, genre: g }))}
+                                        className={`flex-1 py-1.5 rounded-lg text-xs font-bold tracking-wide transition-colors ${
+                                            tropeForm.genre === g
+                                                ? g === 'romance' ? 'bg-orange-400 text-white' : g === 'adventure' ? 'bg-violet-400 text-white' : 'bg-teal-400 text-white'
+                                                : 'bg-zinc-100 text-zinc-400 hover:bg-zinc-200'
+                                        }`}
+                                    >
+                                        {g.toUpperCase()}
+                                    </button>
+                                ))}
+                            </div>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => setTropeFormOpen(false)}
+                                    className="flex-1 py-2.5 rounded-xl text-xs font-bold text-zinc-400 hover:text-zinc-600 transition-colors"
+                                >
+                                    CANCEL
+                                </button>
+                                <button
+                                    onClick={handleSaveTrope}
+                                    disabled={savingTrope || !tropeForm.name || !tropeForm.description}
+                                    className="flex items-center justify-center gap-1.5 flex-1 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 text-white py-2.5 rounded-xl text-xs font-bold tracking-wide transition-colors"
+                                >
+                                    {savingTrope ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
+                                    SAVE TROPE
+                                </button>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
 
             {/* ── Variations ── */}

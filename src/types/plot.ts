@@ -70,3 +70,14 @@ export type Situation = {
     the_moment: string | null;
     exit_states: string[] | null;
 };
+
+export type Trope = {
+    id: string;
+    created_at: string;
+    name: string;
+    description: string;
+    genre: 'romance' | 'adventure' | 'both';
+    dramatic_function: string | null;
+    signature_beat: string | null;
+    pairs_well_with: string[];
+};

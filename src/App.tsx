@@ -5,14 +5,16 @@ import { SparkDetail } from './components/SparkDetail';
 import { SituationFeed } from './components/SituationFeed';
 import { SituationInput } from './components/SituationInput';
 import { SituationDetail } from './components/SituationDetail';
-import { Search, Bell, Plus, ArrowLeft, Zap, Clapperboard } from 'lucide-react';
+import { Search, Bell, Plus, ArrowLeft, Zap, Clapperboard, BookOpen } from 'lucide-react';
 import { PlotIdeaOutput, Situation } from './types/plot';
+import { TropeLibraryDrawer } from './components/TropeLibraryDrawer';
 
 type View = 'feed' | 'create' | 'detail';
 type Mode = 'sparks' | 'situations';
 
 function App() {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [tropeDrawerOpen, setTropeDrawerOpen] = useState(false);
   const [currentView, setCurrentView] = useState<View>('feed');
   const [mode, setMode] = useState<Mode>('sparks');
   const [selectedSpark, setSelectedSpark] = useState<PlotIdeaOutput | null>(null);
@@ -121,6 +123,12 @@ function App() {
             )}
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setTropeDrawerOpen(true)}
+              className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm text-zinc-900 hover:bg-zinc-50 transition-colors"
+            >
+              <BookOpen size={20} />
+            </button>
             <button className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm text-zinc-900 hover:bg-zinc-50 transition-colors">
               <Search size={20} />
             </button>
@@ -160,6 +168,8 @@ function App() {
         </main>
 
       </div>
+
+      <TropeLibraryDrawer open={tropeDrawerOpen} onClose={() => setTropeDrawerOpen(false)} />
 
       {/* FAB — hidden on detail view */}
       {!isDetail && (

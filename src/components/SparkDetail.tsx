@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Star, Loader2, GitFork, Zap, ChevronRight, GitBranch, Clapperboard } from 'lucide-react';
+import { Star, Loader2, GitFork, Zap, ChevronRight, GitBranch, Clapperboard, BookOpen } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { PlotIdeaOutput, BPlot, Situation } from '../types/plot';
+import { PlotIdeaOutput, BPlot, Situation, Trope } from '../types/plot';
 import { generateVariations, developSpark, generateBPlot, generateSituationsForSpark } from '../lib/gemini';
 import { BPlotCard } from './BPlotCard';
+import { TropePicker } from './TropePicker';
 
 interface SparkDetailProps {
     spark: PlotIdeaOutput;
@@ -31,6 +32,7 @@ export function SparkDetail({ spark, onSparkUpdated, onNavigateToSpark, onNaviga
     const [loadingState, setLoadingState] = useState<LoadingState>('idle');
     const [developingVariationId, setDevelopingVariationId] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [activePicker, setActivePicker] = useState<'variations' | 'develop' | null>(null);
 
     const genre = getGenre(localSpark);
     const isDeveloped = Boolean(localSpark.logline);
@@ -75,11 +77,12 @@ export function SparkDetail({ spark, onSparkUpdated, onNavigateToSpark, onNaviga
         await supabase.from('plots').update({ is_starred: newVal }).eq('id', localSpark.id);
     }
 
-    async function handleGenerateVariations() {
+    async function handleGenerateVariations(tropes: Trope[] = []) {
+        setActivePicker(null);
         setError(null);
         setLoadingState('variations');
         try {
-            const varTexts = await generateVariations(localSpark.content, genre);
+            const varTexts = await generateVariations(localSpark.content, genre, tropes);
             const rows = varTexts.map(content => ({
                 content,
                 title: null,
@@ -100,7 +103,8 @@ export function SparkDetail({ spark, onSparkUpdated, onNavigateToSpark, onNaviga
         }
     }
 
-    async function handleDevelopSpark(targetSpark: PlotIdeaOutput, onDone?: (updated: PlotIdeaOutput) => void) {
+    async function handleDevelopSpark(targetSpark: PlotIdeaOutput, tropes: Trope[] = [], onDone?: (updated: PlotIdeaOutput) => void) {
+        setActivePicker(null);
         setError(null);
         const isPrimary = targetSpark.id === localSpark.id;
         if (isPrimary) {
@@ -109,7 +113,7 @@ export function SparkDetail({ spark, onSparkUpdated, onNavigateToSpark, onNaviga
             setDevelopingVariationId(targetSpark.id);
         }
         try {
-            const result = await developSpark(targetSpark.content, genre);
+            const result = await developSpark(targetSpark.content, genre, tropes);
             const { data, error: updateErr } = await supabase
                 .from('plots')
                 .update(result)
@@ -287,36 +291,85 @@ export function SparkDetail({ spark, onSparkUpdated, onNavigateToSpark, onNaviga
 
             {/* ── Action Buttons ── */}
             <div className="flex flex-col gap-3">
+                {/* Develop buttons */}
                 {!isDeveloped && (
-                    <button
-                        onClick={() => handleDevelopSpark(localSpark)}
-                        disabled={isLoading}
-                        className="flex items-center justify-center gap-2 w-full bg-orange-400 hover:bg-orange-500 disabled:opacity-50 text-white py-4 rounded-2xl text-sm font-bold tracking-wider transition-colors shadow-sm"
-                    >
-                        {loadingState === 'developing' ? (
-                            <><Loader2 size={16} className="animate-spin" /> DEVELOPING PREMISE...</>
-                        ) : loadingState === 'situations' ? (
-                            <><Loader2 size={16} className="animate-spin" /> GENERATING SCENES...</>
-                        ) : (
-                            <><Zap size={16} /> DEVELOP <ChevronRight size={16} /></>
-                        )}
-                    </button>
+                    <div className="flex flex-col gap-2">
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => handleDevelopSpark(localSpark, [])}
+                                disabled={isLoading}
+                                className="flex-1 flex items-center justify-center gap-2 bg-orange-400 hover:bg-orange-500 disabled:opacity-50 text-white py-3.5 rounded-2xl text-xs font-bold tracking-wider transition-colors shadow-sm"
+                            >
+                                {(loadingState === 'developing' && activePicker === null) ? (
+                                    <><Loader2 size={14} className="animate-spin" /> DEVELOPING...</>
+                                ) : loadingState === 'situations' ? (
+                                    <><Loader2 size={14} className="animate-spin" /> GENERATING SCENES...</>
+                                ) : (
+                                    <><Zap size={14} /> DEVELOP</>
+                                )}
+                            </button>
+                            <button
+                                onClick={() => setActivePicker(p => p === 'develop' ? null : 'develop')}
+                                disabled={isLoading}
+                                className="flex items-center gap-1.5 bg-orange-100 hover:bg-orange-200 disabled:opacity-40 text-orange-600 px-4 py-3.5 rounded-2xl text-xs font-bold tracking-wide transition-colors"
+                            >
+                                <BookOpen size={13} /> WITH TROPES
+                            </button>
+                        </div>
+                        <AnimatePresence>
+                            {activePicker === 'develop' && (
+                                <TropePicker
+                                    genre={genre}
+                                    actionLabel="DEVELOP"
+                                    onGenerate={(tropes) => handleDevelopSpark(localSpark, tropes)}
+                                    onClose={() => setActivePicker(null)}
+                                    loading={loadingState === 'developing'}
+                                />
+                            )}
+                        </AnimatePresence>
+                    </div>
                 )}
 
-                {localSpark.spark_type !== 'variation' && (
-                    <button
-                        onClick={handleGenerateVariations}
-                        disabled={isLoading || variations.length > 0}
-                        className="flex items-center justify-center gap-2 w-full bg-zinc-800 hover:bg-zinc-700 disabled:opacity-40 text-white py-4 rounded-2xl text-sm font-bold tracking-wider transition-colors"
-                    >
-                        {loadingState === 'variations' ? (
-                            <><Loader2 size={16} className="animate-spin" /> GENERATING...</>
-                        ) : variations.length > 0 ? (
-                            <><GitFork size={16} /> {variations.length} VARIATIONS GENERATED</>
-                        ) : (
-                            <><GitFork size={16} /> GENERATE VARIATIONS <ChevronRight size={16} /></>
-                        )}
-                    </button>
+                {/* Variations buttons */}
+                {localSpark.spark_type !== 'variation' && variations.length === 0 && (
+                    <div className="flex flex-col gap-2">
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => handleGenerateVariations([])}
+                                disabled={isLoading}
+                                className="flex-1 flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-40 text-white py-3.5 rounded-2xl text-xs font-bold tracking-wider transition-colors"
+                            >
+                                {loadingState === 'variations' ? (
+                                    <><Loader2 size={14} className="animate-spin" /> GENERATING...</>
+                                ) : (
+                                    <><GitFork size={14} /> VARIATIONS</>
+                                )}
+                            </button>
+                            <button
+                                onClick={() => setActivePicker(p => p === 'variations' ? null : 'variations')}
+                                disabled={isLoading}
+                                className="flex items-center gap-1.5 bg-zinc-100 hover:bg-zinc-200 disabled:opacity-40 text-zinc-600 px-4 py-3.5 rounded-2xl text-xs font-bold tracking-wide transition-colors"
+                            >
+                                <BookOpen size={13} /> WITH TROPES
+                            </button>
+                        </div>
+                        <AnimatePresence>
+                            {activePicker === 'variations' && (
+                                <TropePicker
+                                    genre={genre}
+                                    actionLabel="GENERATE VARIATIONS"
+                                    onGenerate={handleGenerateVariations}
+                                    onClose={() => setActivePicker(null)}
+                                    loading={loadingState === 'variations'}
+                                />
+                            )}
+                        </AnimatePresence>
+                    </div>
+                )}
+                {localSpark.spark_type !== 'variation' && variations.length > 0 && (
+                    <div className="flex items-center gap-2 text-xs text-zinc-400 font-medium">
+                        <GitFork size={13} /> {variations.length} VARIATIONS GENERATED
+                    </div>
                 )}
             </div>
 
