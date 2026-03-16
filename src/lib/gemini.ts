@@ -1,17 +1,20 @@
-/// <reference types="vite/client" />
-import { GoogleGenAI } from '@google/genai';
 import { BeatArc } from '../types/plot';
 
-const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY || '' });
-
-const MODEL = 'gemini-2.0-flash';
-
 async function callGemini(prompt: string): Promise<string> {
-    const response = await ai.models.generateContent({
-        model: MODEL,
-        contents: prompt,
+    const response = await fetch('/api/gemini', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ prompt }),
     });
-    return response.text ?? '';
+
+    if (!response.ok) {
+        throw new Error(`Failed to generate content: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.text || '';
 }
 
 function parseJSON<T>(raw: string): T {
