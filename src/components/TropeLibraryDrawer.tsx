@@ -11,7 +11,7 @@ interface TropeLibraryDrawerProps {
     onClose: () => void;
 }
 
-type GenreFilter = 'all' | 'romance' | 'adventure' | 'both';
+type GenreFilter = 'all' | 'romance' | 'adventure' | 'harem' | 'both';
 
 type DrawerLoadingState = 'idle' | 'seeding' | 'fetching-url' | 'saving-import';
 
@@ -48,11 +48,12 @@ export function TropeLibraryDrawer({ open, onClose }: TropeLibraryDrawerProps) {
         setError(null);
         setLoadingState('seeding');
         try {
-            const [romanceTropes, adventureTropes] = await Promise.all([
+            const [romanceTropes, adventureTropes, haremTropes] = await Promise.all([
                 seedTropeLibrary('romance'),
                 seedTropeLibrary('adventure'),
+                seedTropeLibrary('harem'),
             ]);
-            const all = [...romanceTropes, ...adventureTropes];
+            const all = [...romanceTropes, ...adventureTropes, ...haremTropes];
             const { error: insertErr } = await supabase.from('tropes').insert(all);
             if (insertErr) throw insertErr;
             await fetchTropes();
@@ -182,7 +183,7 @@ export function TropeLibraryDrawer({ open, onClose }: TropeLibraryDrawerProps) {
                         {/* Genre filter */}
                         <div className="px-5 pb-3">
                             <div className="bg-white rounded-full shadow-sm p-1 flex gap-1">
-                                {(['all', 'romance', 'adventure', 'both'] as GenreFilter[]).map(g => (
+                                {(['all', 'romance', 'adventure', 'harem', 'both'] as GenreFilter[]).map(g => (
                                     <button
                                         key={g}
                                         onClick={() => setGenreFilter(g)}
@@ -300,7 +301,7 @@ export function TropeLibraryDrawer({ open, onClose }: TropeLibraryDrawerProps) {
                                             <input value={newTrope.name} onChange={e => setNewTrope(p => ({ ...p, name: e.target.value }))} placeholder="Trope name..." className="bg-zinc-50 rounded-xl px-3 py-2 text-xs text-zinc-700 placeholder:text-zinc-300 outline-none border border-zinc-100 focus:ring-1 focus:ring-zinc-200" />
                                             <textarea value={newTrope.description} onChange={e => setNewTrope(p => ({ ...p, description: e.target.value }))} placeholder="What tension does this create?" className="bg-zinc-50 rounded-xl px-3 py-2 text-xs text-zinc-700 placeholder:text-zinc-300 outline-none border border-zinc-100 focus:ring-1 focus:ring-zinc-200 resize-none h-16" />
                                             <div className="flex gap-2">
-                                                {(['romance', 'adventure', 'both'] as Trope['genre'][]).map(g => (
+                                                {(['romance', 'adventure', 'harem', 'both'] as Trope['genre'][]).map(g => (
                                                     <button key={g} onClick={() => setNewTrope(p => ({ ...p, genre: g }))} className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors ${newTrope.genre === g ? 'bg-zinc-800 text-white' : 'bg-zinc-50 text-zinc-400'}`}>
                                                         {g.toUpperCase()}
                                                     </button>

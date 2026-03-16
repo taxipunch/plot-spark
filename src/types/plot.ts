@@ -76,7 +76,7 @@ export type Trope = {
     created_at: string;
     name: string;
     description: string;
-    genre: 'romance' | 'adventure' | 'both';
+    genre: 'romance' | 'adventure' | 'harem' | 'both';
     dramatic_function: string | null;
     signature_beat: string | null;
     pairs_well_with: string[];

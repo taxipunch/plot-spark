@@ -6,7 +6,7 @@ interface PlotInputProps {
     onPlotCreated: () => void;
 }
 
-const GENRES = ['ROMANCE', 'ADVENTURE'];
+const GENRES = ['ROMANCE', 'ADVENTURE', 'HAREM'];
 const SUGGESTED_TAGS = ['Power Dynamic', 'Forbidden', 'Revenge', 'Mistaken Identity', 'Rivals', 'Survival', 'Conspiracy', 'Second Chance', 'Reluctant Alliance', 'Dark Secret'];
 
 export function PlotInput({ onPlotCreated }: PlotInputProps) {

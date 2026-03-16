@@ -10,6 +10,7 @@ interface TropeCardProps {
 const GENRE_STYLES: Record<string, string> = {
     romance: 'bg-orange-50 text-orange-500 border-orange-100',
     adventure: 'bg-violet-50 text-violet-500 border-violet-100',
+    harem: 'bg-red-50 text-red-500 border-red-100',
     both: 'bg-teal-50 text-teal-500 border-teal-100',
 };
 

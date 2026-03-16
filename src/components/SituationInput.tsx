@@ -6,7 +6,7 @@ interface SituationInputProps {
     onSituationCreated: () => void;
 }
 
-const GENRES = ['ROMANCE', 'ADVENTURE'];
+const GENRES = ['ROMANCE', 'ADVENTURE', 'HAREM'];
 const SUGGESTED_TAGS = ['First Meeting', 'Confrontation', 'Quiet Tension', 'Revelation', 'Power Shift', 'Aftermath', 'Forbidden Proximity', 'Betrayal', 'The Ask', 'Last Chance'];
 
 export function SituationInput({ onSituationCreated }: SituationInputProps) {

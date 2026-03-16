@@ -16,6 +16,13 @@ function parseJSON<T>(raw: string): T {
     return JSON.parse(cleaned);
 }
 
+function getGenreKey(genre: string): 'romance' | 'adventure' | 'harem' {
+    const g = genre.toUpperCase();
+    if (g.includes('ROMANCE')) return 'romance';
+    if (g.includes('HAREM')) return 'harem';
+    return 'adventure';
+}
+
 function buildTropeContext(tropes: Trope[]): string {
     if (!tropes.length) return '';
     const lines = tropes.map(t =>
@@ -27,9 +34,11 @@ function buildTropeContext(tropes: Trope[]): string {
 // ─── Generate 4 Variations ───────────────────────────────────────────────────
 
 export async function generateVariations(content: string, genre: string, tropes: Trope[] = []): Promise<string[]> {
-    const isRomance = genre.toUpperCase().includes('ROMANCE');
-    const focus = isRomance
+    const genreKey = getGenreKey(genre);
+    const focus = genreKey === 'romance'
         ? 'Each variation should explore a different type of forbidden or emotionally charged dynamic: power imbalance, rivals-to-lovers, secret identity, second chance, or class divide. Vary the emotional stakes and the nature of the obstacle.'
+        : genreKey === 'harem'
+        ? 'Each variation should explore a different contrived proximity scenario: forced cohabitation, a chosen-hero/protector dynamic, an academy or training setting, or an isekai transport. Vary the archetype of the dominant love interest and the nature of the power imbalance.'
         : 'Each variation should explore a different adventure context: espionage/covert ops, survival/wilderness, heist/infiltration, or war/conflict. Vary the competence fantasy and the nature of the threat.';
 
     const prompt = `You are a genre fiction story development expert.
@@ -59,14 +68,21 @@ export type DevelopedSpark = {
 };
 
 export async function developSpark(content: string, genre: string, tropes: Trope[] = []): Promise<DevelopedSpark> {
-    const isRomance = genre.toUpperCase().includes('ROMANCE');
-    const genreGuide = isRomance
+    const genreKey = getGenreKey(genre);
+    const genreGuide = genreKey === 'romance'
         ? `Genre context — EROTIC/EMOTIONAL ROMANCE:
 - Logline: Foreground the emotional/forbidden dimension and what it costs the heroine.
 - Core tension: The specific incompatibility that makes the attraction dangerous, not just uncomfortable.
 - Hook: The charged first encounter that establishes the power dynamic.
 - Central twist: A revelation that raises the emotional stakes — a secret, a betrayal, a prior claim.
 - Beat arc: Beat 1 = desire ignites against better judgment. Beat 2 = the cost of wanting becomes real. Beat 3 = the impossible choice that forces surrender or sacrifice.`
+        : genreKey === 'harem'
+        ? `Genre context — MEN'S EROTIC ADVENTURE / HAREM:
+- Logline: Foreground the protagonist's exceptional quality that draws multiple interests and the contrived situation that concentrates them.
+- Core tension: The protagonist's inability (or unwillingness) to choose — and the external pressure forcing him to prioritise.
+- Hook: The inciting event that creates the first charged encounter with the primary love interest, while establishing others in orbit.
+- Central twist: A revelation about the protagonist's true nature, power, or obligation that deepens one bond above the rest.
+- Beat arc: Beat 1 = the contrived circumstance locks the cast into proximity. Beat 2 = competing obligations multiply; jealousy and territorial dynamics emerge. Beat 3 = a genuine threat forces the protagonist to act, resolving or deepening the central bond.`
         : `Genre context — MEN'S ADVENTURE FICTION:
 - Logline: Foreground competence, high stakes, and the specific threat.
 - Core tension: The mission objective in direct collision with the personal relationship.
@@ -110,9 +126,11 @@ export type GeneratedBPlot = {
 };
 
 export async function generateBPlot(content: string, genre: string): Promise<GeneratedBPlot> {
-    const isRomance = genre.toUpperCase().includes('ROMANCE');
-    const genreGuide = isRomance
+    const genreKey = getGenreKey(genre);
+    const genreGuide = genreKey === 'romance'
         ? `B-plot for ROMANCE — the heroine needs an independent agenda that has NOTHING to do with desire but would be destroyed if she falls for him. Examples: she's investigating him (journalist/spy/whistleblower), she needs something he controls (inheritance, evidence, a person), she has a prior loyalty his world threatens. The B-plot should make every step toward him a step away from the thing she came for. The climax must force a real choice — not just emotional surrender.`
+        : genreKey === 'harem'
+        ? `B-plot for HAREM — a rival faction or external threat requires the protagonist to leverage every member of the harem dynamic, each contributing something the mission needs. The B-plot should reveal something true about the protagonist's real feelings through the pressure of competing obligations. The climax forces an impossible prioritisation right when he can least afford the distraction — and his choice in that moment defines the central relationship.`
         : `B-plot for ADVENTURE — the mission and the relationship must be in direct tension. The woman he's drawn to is either the asset he can't afford to want, or she's connected to the threat. The B-plot should NOT resolve before the romantic payoff — the two strands must braid and collide in the same climactic scene. The reader must be genuinely unsure which he'll choose right until he chooses both.`;
 
     const prompt = `You are a structural story expert specialising in genre fiction B-plots.
@@ -141,9 +159,11 @@ Return ONLY valid JSON — no markdown:
 export type GeneratedSituation = { title: string; content: string; };
 
 export async function generateSituationsForSpark(sparkContent: string, genre: string): Promise<GeneratedSituation[]> {
-    const isRomance = genre.toUpperCase().includes('ROMANCE');
-    const genreGuide = isRomance
+    const genreKey = getGenreKey(genre);
+    const genreGuide = genreKey === 'romance'
         ? `Generate 4 charged interpersonal scenes: the ignition (first moment the attraction becomes undeniable), the escalation (a scene where desire costs something real), the confrontation/revelation (a secret or wound surfaces), and the aftermath (the quiet charged moment after everything shifts).`
+        : genreKey === 'harem'
+        ? `Generate 4 charged multi-character scenes: the acquisition (the moment a new member enters the protagonist's orbit under a contrived circumstance), the territorial moment (two interests compete for proximity and the protagonist is caught between them), the quiet intimacy (the protagonist alone with one interest, the others temporarily absent — the scene where the real dynamic surfaces), and the crisis (an external threat forces the protagonist to reveal his actual priorities).`
         : `Generate 4 high-stakes operational scenes: the first contact (protagonist meets the key player/asset under pressure), the complication (the mission changes or a loyalty fractures), the confrontation (the central threat or betrayal becomes direct), and the pivot (the moment the protagonist makes the choice that defines the story).`;
 
     const prompt = `You are a scene-level story development expert.
@@ -170,9 +190,11 @@ Return ONLY valid JSON — no markdown fences, no explanation:
 // ─── Situation Variations ─────────────────────────────────────────────────────
 
 export async function generateSituationVariations(situationContent: string, genre: string, tropes: Trope[] = []): Promise<string[]> {
-    const isRomance = genre.toUpperCase().includes('ROMANCE');
-    const axes = isRomance
+    const genreKey = getGenreKey(genre);
+    const axes = genreKey === 'romance'
         ? 'Vary across: emotional register (hostile / tender / ambiguous / darkly comic), who holds the power and how it shifts, what each character is hiding, and what would happen if the scene ended differently.'
+        : genreKey === 'harem'
+        ? 'Vary across: which love interest dominates the scene and her archetype, the social geometry (who is watching / who will find out), how close the scene comes to resolution, and what the absence of the other interested parties makes possible.'
         : 'Vary across: threat level (cold operational / openly hostile / morally ambiguous / grudging alliance), who has tactical advantage, what information is missing, and what the protagonist risks losing.';
 
     const prompt = `You are a scene development expert.
@@ -203,9 +225,11 @@ export type DevelopedSituation = {
 };
 
 export async function developSituation(situationContent: string, genre: string, tropes: Trope[] = []): Promise<DevelopedSituation> {
-    const isRomance = genre.toUpperCase().includes('ROMANCE');
-    const genreGuide = isRomance
+    const genreKey = getGenreKey(genre);
+    const genreGuide = genreKey === 'romance'
         ? `Genre: ROMANCE/EROTIC. Focus on: the physical proximity and what it costs to maintain composure, the thing neither character will say, the specific sensory detail that makes the attraction undeniable, what each character came into this scene wanting and what they leave wanting instead.`
+        : genreKey === 'harem'
+        ? `Genre: MEN'S EROTIC ADVENTURE / HAREM. Focus on: the protagonist's awareness of each character's distinct pull and archetype, the social geometry of the scene (who's watching, who's absent, who will find out), the specific archetype dynamic that defines this encounter (tsundere thaw, kuudere crack, rival relents, etc.), and the moment of contact or near-contact that defines the scene's erotic charge.`
         : `Genre: ADVENTURE. Focus on: the tactical situation and what it demands, the operational risk of feeling anything, the specific competence or vulnerability that changes the dynamic, what the protagonist came in to achieve and what he's now not sure he can afford to lose.`;
 
     const prompt = `You are a scene-level story craft expert.
@@ -231,9 +255,11 @@ Return ONLY valid JSON — no markdown:
 
 // ─── Trope Library Seeding ────────────────────────────────────────────────────
 
-export async function seedTropeLibrary(genre: 'romance' | 'adventure'): Promise<Omit<Trope, 'id' | 'created_at'>[]> {
+export async function seedTropeLibrary(genre: 'romance' | 'adventure' | 'harem'): Promise<Omit<Trope, 'id' | 'created_at'>[]> {
     const genreGuide = genre === 'romance'
         ? `Generate 25 dramatic tropes for EROTIC/EMOTIONAL ROMANCE fiction. Focus on: power dynamics, forbidden desire, identity and secrets, emotional wounds, the cost of wanting, situational irony that forces intimacy. Make them specific and dramatically sharp — not generic ("love triangle") but precise ("The Secret That Would End Everything If He Knew").`
+        : genre === 'harem'
+        ? `Generate 25 dramatic tropes for MEN'S EROTIC ADVENTURE / HAREM fiction. Focus on: contrived proximity mechanics, archetype dynamics (tsundere thaw, kuudere crack, childhood friend advantage, rival relenting, elder sister type, etc.), power fantasy triggers, territorial jealousy between interests, chosen one burden, the impossible prioritisation, and the revelation that deepens one relationship above the rest. Make them specific and scenically generative — not generic ("harem ending") but precise ("The Childhood Friend Who Knows His Real Name") or ("The Rival Who Protects Him When No One Is Watching").`
         : `Generate 25 dramatic tropes for MEN'S ADVENTURE/THRILLER fiction. Focus on: mission vs. personal stakes, competence under pressure, betrayal and loyalty, the asset you can't afford to want, forced alliance, the price of truth. Make them specific and operationally grounded — not generic ("the chase") but precise ("The Asset Connected to the Threat").`;
 
     const prompt = `You are a genre fiction craft expert with deep knowledge of dramatic structure.
@@ -286,7 +312,7 @@ Return ONLY valid JSON — no markdown:
 {
   "name": "The trope name: 3-7 words, sharp and reusable",
   "description": "2 sentences: what tension this pattern creates and why it works dramatically — written as a general principle, not about this specific scene.",
-  "genre": "${situation.genre === 'ADVENTURE' ? 'adventure' : 'romance'}",
+  "genre": "${getGenreKey(situation.genre ?? 'adventure')}",
   "dramatic_function": "one of: external obstacle | internal cost | situational irony | power reversal | information asymmetry | forced proximity | loyalty conflict | identity pressure",
   "signature_beat": "1-2 sentences: the specific scene moment this trope almost always generates."
 }`;

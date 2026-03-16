@@ -15,7 +15,7 @@ type LoadingState = 'idle' | 'variations' | 'developing';
 
 function getGenre(situation: Situation): string {
     if (situation.genre) return situation.genre;
-    const tag = situation.tags?.find(t => ['ROMANCE', 'ADVENTURE'].includes(t.toUpperCase()));
+    const tag = situation.tags?.find(t => ['ROMANCE', 'ADVENTURE', 'HAREM'].includes(t.toUpperCase()));
     return tag || 'ROMANCE';
 }
 
@@ -371,13 +371,13 @@ export function SituationDetail({ situation, onSituationUpdated }: SituationDeta
                                 className="w-full bg-white border border-zinc-100 rounded-xl px-3 py-2 text-sm text-zinc-700 placeholder:text-zinc-300 outline-none focus:ring-1 focus:ring-zinc-200"
                             />
                             <div className="flex gap-2">
-                                {(['romance', 'adventure', 'both'] as const).map(g => (
+                                {(['romance', 'adventure', 'harem', 'both'] as const).map(g => (
                                     <button
                                         key={g}
                                         onClick={() => setTropeForm(f => ({ ...f, genre: g }))}
                                         className={`flex-1 py-1.5 rounded-lg text-xs font-bold tracking-wide transition-colors ${
                                             tropeForm.genre === g
-                                                ? g === 'romance' ? 'bg-orange-400 text-white' : g === 'adventure' ? 'bg-violet-400 text-white' : 'bg-teal-400 text-white'
+                                                ? g === 'romance' ? 'bg-orange-400 text-white' : g === 'adventure' ? 'bg-violet-400 text-white' : g === 'harem' ? 'bg-red-400 text-white' : 'bg-teal-400 text-white'
                                                 : 'bg-zinc-100 text-zinc-400 hover:bg-zinc-200'
                                         }`}
                                     >

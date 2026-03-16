@@ -10,7 +10,7 @@ interface SituationFeedProps {
     onCardClick: (situation: Situation) => void;
 }
 
-const CATEGORIES = ['ALL', 'STARRED', 'DEVELOPED', 'VARIATIONS', 'ROMANCE', 'ADVENTURE'];
+const CATEGORIES = ['ALL', 'STARRED', 'DEVELOPED', 'VARIATIONS', 'ROMANCE', 'ADVENTURE', 'HAREM'];
 
 export function SituationFeed({ refreshTrigger, onCardClick }: SituationFeedProps) {
     const [situations, setSituations] = useState<Situation[]>([]);

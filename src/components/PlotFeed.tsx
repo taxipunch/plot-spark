@@ -10,7 +10,7 @@ interface PlotFeedProps {
     onCardClick: (plot: PlotIdeaOutput) => void;
 }
 
-const CATEGORIES = ['ALL', 'STARRED', 'DEVELOPED', 'VARIATIONS', 'ROMANCE', 'ADVENTURE', 'FANTASY', 'SCI-FI', 'MYSTERY'];
+const CATEGORIES = ['ALL', 'STARRED', 'DEVELOPED', 'VARIATIONS', 'ROMANCE', 'ADVENTURE', 'HAREM', 'FANTASY', 'SCI-FI', 'MYSTERY'];
 
 export function PlotFeed({ refreshTrigger, onCardClick }: PlotFeedProps) {
     const [plots, setPlots] = useState<PlotIdeaOutput[]>([]);

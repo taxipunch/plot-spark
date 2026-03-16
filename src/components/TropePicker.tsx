@@ -19,7 +19,8 @@ export function TropePicker({ genre, actionLabel, onGenerate, onClose, loading =
 
     useEffect(() => {
         async function fetchTropes() {
-            const genreFilter = genre.toUpperCase().includes('ROMANCE') ? 'romance' : 'adventure';
+            const g = genre.toUpperCase();
+            const genreFilter = g.includes('ROMANCE') ? 'romance' : g.includes('HAREM') ? 'harem' : 'adventure';
             const { data } = await supabase
                 .from('tropes')
                 .select('*')
