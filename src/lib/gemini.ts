@@ -1,7 +1,8 @@
+/// <reference types="vite/client" />
 import { GoogleGenAI } from '@google/genai';
 import { BeatArc } from '../types/plot';
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY || '' });
 
 const MODEL = 'gemini-2.0-flash';
 
