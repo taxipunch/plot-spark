@@ -1,4 +1,6 @@
 import { BeatArc, Trope, Situation } from '../types/plot';
+import { StyleProfile } from '../types/style';
+import { buildStyleContext } from './style';
 
 async function callGemini(prompt: string): Promise<string> {
     const response = await fetch('/api/gemini', {
@@ -33,7 +35,7 @@ function buildTropeContext(tropes: Trope[]): string {
 
 // ─── Generate 4 Variations ───────────────────────────────────────────────────
 
-export async function generateVariations(content: string, genre: string, tropes: Trope[] = [], direction: string = ''): Promise<string[]> {
+export async function generateVariations(content: string, genre: string, tropes: Trope[] = [], direction: string = '', profile?: StyleProfile): Promise<string[]> {
     const genreKey = getGenreKey(genre);
     const focus = genreKey === 'romance'
         ? 'Each variation should explore a different type of forbidden or emotionally charged dynamic: power imbalance, rivals-to-lovers, secret identity, second chance, or class divide. Vary the emotional stakes and the nature of the obstacle.'
@@ -45,7 +47,7 @@ export async function generateVariations(content: string, genre: string, tropes:
 
 Given this raw plot spark, generate exactly 4 distinct variations that each take the seed in a different direction.
 ${focus}
-${buildTropeContext(tropes)}${direction.trim() ? `\nCreative direction — apply this across all 4 variations: ${direction.trim()}\n` : ''}
+${buildTropeContext(tropes)}${direction.trim() ? `\nCreative direction — apply this across all 4 variations: ${direction.trim()}\n` : ''}${profile ? buildStyleContext(profile, genre) : ''}
 Raw spark: "${content}"
 
 Return ONLY a valid JSON array of exactly 4 strings — no explanation, no markdown fences, no extra text.
@@ -67,7 +69,7 @@ export type DevelopedSpark = {
     beat_arc: BeatArc;
 };
 
-export async function developSpark(content: string, genre: string, tropes: Trope[] = []): Promise<DevelopedSpark> {
+export async function developSpark(content: string, genre: string, tropes: Trope[] = [], profile?: StyleProfile): Promise<DevelopedSpark> {
     const genreKey = getGenreKey(genre);
     const genreGuide = genreKey === 'romance'
         ? `Genre context — EROTIC/EMOTIONAL ROMANCE:
@@ -95,7 +97,7 @@ export async function developSpark(content: string, genre: string, tropes: Trope
 Develop this raw spark into a full story premise. Be specific, vivid, and dramatically sharp.
 
 ${genreGuide}
-${buildTropeContext(tropes)}
+${buildTropeContext(tropes)}${profile ? buildStyleContext(profile, genre) : ''}
 Raw spark: "${content}"
 
 Return ONLY valid JSON in this exact shape — no markdown, no extra keys:
@@ -158,7 +160,7 @@ Return ONLY valid JSON — no markdown:
 
 export type GeneratedSituation = { title: string; content: string; };
 
-export async function generateSituationsForSpark(sparkContent: string, genre: string): Promise<GeneratedSituation[]> {
+export async function generateSituationsForSpark(sparkContent: string, genre: string, profile?: StyleProfile): Promise<GeneratedSituation[]> {
     const genreKey = getGenreKey(genre);
     const genreGuide = genreKey === 'romance'
         ? `Generate 4 charged interpersonal scenes: the ignition (first moment the attraction becomes undeniable), the escalation (a scene where desire costs something real), the confrontation/revelation (a secret or wound surfaces), and the aftermath (the quiet charged moment after everything shifts).`
@@ -170,7 +172,7 @@ export async function generateSituationsForSpark(sparkContent: string, genre: st
 
 Given this story spark premise, generate exactly 4 charged scene situations that naturally live inside this story.
 ${genreGuide}
-
+${profile ? buildStyleContext(profile, genre) : ''}
 Each situation should be a specific, vivid, concrete moment — not a summary. Make them feel like real scenes, not plot summaries.
 
 Spark premise: "${sparkContent}"
@@ -189,7 +191,7 @@ Return ONLY valid JSON — no markdown fences, no explanation:
 
 // ─── Situation Variations ─────────────────────────────────────────────────────
 
-export async function generateSituationVariations(situationContent: string, genre: string, tropes: Trope[] = [], direction: string = ''): Promise<string[]> {
+export async function generateSituationVariations(situationContent: string, genre: string, tropes: Trope[] = [], direction: string = '', profile?: StyleProfile): Promise<string[]> {
     const genreKey = getGenreKey(genre);
     const axes = genreKey === 'romance'
         ? 'Vary across: emotional register (hostile / tender / ambiguous / darkly comic), who holds the power and how it shifts, what each character is hiding, and what would happen if the scene ended differently.'
@@ -201,7 +203,7 @@ export async function generateSituationVariations(situationContent: string, genr
 
 Given this scene situation, generate exactly 4 distinct variations — each takes the same core dynamic in a different direction.
 ${axes}
-${buildTropeContext(tropes)}${direction.trim() ? `\nCreative direction — apply this across all 4 variations: ${direction.trim()}\n` : ''}
+${buildTropeContext(tropes)}${direction.trim() ? `\nCreative direction — apply this across all 4 variations: ${direction.trim()}\n` : ''}${profile ? buildStyleContext(profile, genre) : ''}
 Scene: "${situationContent}"
 
 Return ONLY a valid JSON array of exactly 4 strings — no markdown, no explanation.
@@ -224,7 +226,7 @@ export type DevelopedSituation = {
     exit_states: string[];
 };
 
-export async function developSituation(situationContent: string, genre: string, tropes: Trope[] = []): Promise<DevelopedSituation> {
+export async function developSituation(situationContent: string, genre: string, tropes: Trope[] = [], profile?: StyleProfile): Promise<DevelopedSituation> {
     const genreKey = getGenreKey(genre);
     const genreGuide = genreKey === 'romance'
         ? `Genre: ROMANCE/EROTIC. Focus on: the physical proximity and what it costs to maintain composure, the thing neither character will say, the specific sensory detail that makes the attraction undeniable, what each character came into this scene wanting and what they leave wanting instead.`
@@ -236,7 +238,7 @@ export async function developSituation(situationContent: string, genre: string, 
 
 Develop this scene situation into its full dramatic anatomy.
 ${genreGuide}
-${buildTropeContext(tropes)}
+${buildTropeContext(tropes)}${profile ? buildStyleContext(profile, genre) : ''}
 Scene: "${situationContent}"
 
 Return ONLY valid JSON — no markdown:

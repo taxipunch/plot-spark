@@ -4,6 +4,7 @@ import { Star, Loader2, GitFork, Zap, ChevronRight, Clapperboard, Sparkles, Book
 import { supabase } from '../lib/supabase';
 import { Situation, PlotIdeaOutput, Trope } from '../types/plot';
 import { developSituation, generateSituationVariations, extractTropeFromSituation } from '../lib/gemini';
+import { loadStyleProfile } from '../lib/style';
 import { TropePicker } from './TropePicker';
 
 interface SituationDetailProps {
@@ -76,7 +77,7 @@ export function SituationDetail({ situation, onSituationUpdated }: SituationDeta
         setActivePicker(null);
         setLoadingState('variations');
         try {
-            const varTexts = await generateSituationVariations(local.content, genre, tropes, direction);
+            const varTexts = await generateSituationVariations(local.content, genre, tropes, direction, loadStyleProfile());
             const rows = varTexts.map(content => ({
                 content,
                 title: null,
@@ -105,7 +106,7 @@ export function SituationDetail({ situation, onSituationUpdated }: SituationDeta
             setDevelopingVariationId(target.id);
         }
         try {
-            const result = await developSituation(target.content, genre, tropes);
+            const result = await developSituation(target.content, genre, tropes, loadStyleProfile());
             const { data, error: updateErr } = await supabase
                 .from('situations')
                 .update(result)

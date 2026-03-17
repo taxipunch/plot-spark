@@ -1,6 +1,10 @@
 import React, { useState } from 'react';
+import { SlidersHorizontal } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { PlotIdeaInput } from '../types/plot';
+import { StyleProfile, TONE_LEVELS, ARC_LEVELS, DYNAMIC_LEVELS, EXPLICIT_LEVELS } from '../types/style';
+import { loadStyleProfile } from '../lib/style';
+import { StyleTuner } from './StyleTuner';
 
 interface PlotInputProps {
     onPlotCreated: () => void;
@@ -15,6 +19,8 @@ export function PlotInput({ onPlotCreated }: PlotInputProps) {
     const [genre, setGenre] = useState(GENRES[0]);
     const [tags, setTags] = useState<string[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [profile, setProfile] = useState<StyleProfile>(() => loadStyleProfile());
+    const [tunerOpen, setTunerOpen] = useState(false);
 
     const toggleTag = (tag: string) => {
         if (tags.includes(tag)) {
@@ -104,6 +110,19 @@ export function PlotInput({ onPlotCreated }: PlotInputProps) {
                     </div>
                 </div>
 
+                {/* Fine-Tune Button */}
+                <button
+                    type="button"
+                    onClick={() => setTunerOpen(true)}
+                    className="flex items-center gap-2 w-full bg-zinc-50 hover:bg-zinc-100 border border-zinc-100 text-zinc-500 px-4 py-3 rounded-2xl transition-colors text-left"
+                >
+                    <SlidersHorizontal size={13} className="shrink-0 text-zinc-400" />
+                    <span className="text-xs font-bold tracking-wide text-zinc-400">FINE-TUNE</span>
+                    <span className="text-xs text-zinc-300 ml-1">
+                        {TONE_LEVELS[profile.tone].label} · {ARC_LEVELS[profile.arc].label} · {DYNAMIC_LEVELS[profile.dynamic].label} · {EXPLICIT_LEVELS[profile.explicit].label}
+                    </span>
+                </button>
+
                 {/* Tags Section */}
                 <div>
                     <label className="block text-xs font-bold text-zinc-400 mb-2 tracking-widest">TAGS</label>
@@ -138,6 +157,13 @@ export function PlotInput({ onPlotCreated }: PlotInputProps) {
                 </button>
 
             </form>
+        <StyleTuner
+            open={tunerOpen}
+            onClose={() => setTunerOpen(false)}
+            profile={profile}
+            onChange={setProfile}
+            genre={genre}
+        />
         </div>
     );
 }

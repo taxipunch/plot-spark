@@ -4,6 +4,7 @@ import { Star, Loader2, GitFork, Zap, ChevronRight, GitBranch, Clapperboard, Boo
 import { supabase } from '../lib/supabase';
 import { PlotIdeaOutput, BPlot, Situation, Trope } from '../types/plot';
 import { generateVariations, developSpark, generateBPlot, generateSituationsForSpark } from '../lib/gemini';
+import { loadStyleProfile } from '../lib/style';
 import { BPlotCard } from './BPlotCard';
 import { TropePicker } from './TropePicker';
 
@@ -82,7 +83,7 @@ export function SparkDetail({ spark, onSparkUpdated, onNavigateToSpark, onNaviga
         setError(null);
         setLoadingState('variations');
         try {
-            const varTexts = await generateVariations(localSpark.content, genre, tropes, direction);
+            const varTexts = await generateVariations(localSpark.content, genre, tropes, direction, loadStyleProfile());
             const rows = varTexts.map(content => ({
                 content,
                 title: null,
@@ -113,7 +114,7 @@ export function SparkDetail({ spark, onSparkUpdated, onNavigateToSpark, onNaviga
             setDevelopingVariationId(targetSpark.id);
         }
         try {
-            const result = await developSpark(targetSpark.content, genre, tropes);
+            const result = await developSpark(targetSpark.content, genre, tropes, loadStyleProfile());
             const { data, error: updateErr } = await supabase
                 .from('plots')
                 .update(result)
@@ -130,7 +131,7 @@ export function SparkDetail({ spark, onSparkUpdated, onNavigateToSpark, onNaviga
                     // Auto-generate 4 situations after developing the primary spark
                     setLoadingState('situations');
                     try {
-                        const generatedSits = await generateSituationsForSpark(targetSpark.content, genre);
+                        const generatedSits = await generateSituationsForSpark(targetSpark.content, genre, loadStyleProfile());
                         const sitRows = generatedSits.map(s => ({
                             title: s.title,
                             content: s.content,
